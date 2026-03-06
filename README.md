@@ -5,7 +5,7 @@ tools to LLMs for web pentesting and network vulnerability monitoring.
 
 ## Architecture
 ```
-LLM (Claude, etc.)
+LLM (Claude, OpenAI...)
     │
     ▼  MCP Protocol (SSE)
 ┌─────────────────────────────┐
@@ -38,8 +38,9 @@ cp .env.example .env
 # Build and run
 docker compose up --build -d
 
-# Verify
-curl http://localhost:8083/health
+# Verify, it should respond with code 200 and show "event: endpoint" on first line
+curl http://localhost:8083/sse
+
 ```
 
 ## Connecting to Claude Desktop
@@ -49,7 +50,22 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "kali-security": {
-      "url": "http://localhost:8083/sse"
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--cap-add=NET_RAW",
+        "--cap-add=NET_BIND_SERVICE",
+        "--cap-add=NET_ADMIN",
+        "-e",
+        "MCP_ALLOWED_TARGETS=",
+        "-e",
+        "MCP_RATE_LIMIT_PER_MIN=30",
+        "-e",
+        "MCP_LOG_LEVEL=INFO",
+        "kali-mcp-security:latest"
+      ]
     }
   }
 }
@@ -80,31 +96,3 @@ Add to `claude_desktop_config.json`:
 - **Output truncation** — prevents context window overflow
 - **Capability-based permissions** — only NET_RAW + NET_BIND_SERVICE
 - **Read-only containers** with tmpfs for scratch space
-```
-
----
-
-## Project File Structure
-```
-kali-mcp-security/
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── .env
-├── README.md
-├── server.py                  # FastMCP entrypoint
-├── utils/
-│   ├── __init__.py
-│   ├── sanitizer.py           # Input validation & allow-list
-│   ├── rate_limiter.py        # Sliding window rate limiter
-│   ├── runner.py              # Async subprocess execution
-│   └── formatter.py           # Structured output formatting
-└── tools/
-    ├── __init__.py
-    ├── nmap_tool.py
-    ├── nikto_tool.py
-    ├── sqlmap_tool.py
-    ├── wpscan_tool.py
-    ├── dirb_tool.py
-    ├── searchsploit_tool.py
-    └── network_monitor.py     # ping, dns, whois, port check
