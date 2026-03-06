@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  mcp-security:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kali-mcp-security:latest
+    container_name: kali-mcp-security
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-8083}:${MCP_PORT:-8083}"
+    env_file:
+      - .env
+    environment:
+      - MCP_HOST=0.0.0.0
+      - MCP_TRANSPORT=sse
+    cap_add:
+      - NET_RAW          # Required for nmap SYN scans, ping
+      - NET_BIND_SERVICE # Bind to privileged ports if needed
+    cap_drop:
+      - ALL              # Drop everything first, then add back
+    security_opt:
+      - no-new-privileges:false
+    read_only: false
+    tmpfs:
+      - /tmp:size=512M
+    volumes:
+      - mcp-logs:/opt/mcp-server/logs
+      - mcp-reports:/opt/mcp-server/reports
+    networks:
+      - mcp-net
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+
+volumes:
+  mcp-logs:
+  mcp-reports:
+
+networks:
+  mcp-net:
+    driver: bridge
